@@ -20,7 +20,7 @@ with open('bot.toml', 'rb') as f:
 
 chat_client = OpenAI(api_key=config['openai']['api_key'])
 
-session = boto3.Session(profile_name='ec2-basics')
+session = boto3.Session(profile_name=config['aws']['profile'])
 ec2 = session.resource('ec2', region_name=config['aws']['region'])
 
 con = sqlite3.connect('bot.db')

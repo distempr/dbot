@@ -1,5 +1,6 @@
 [aws]
 region = "REGION"
+profile = "PROFILE"
 
 [tg]
 token = "TOKEN"
