@@ -3,8 +3,11 @@ region = "REGION"
 
 [tg]
 token = "TOKEN"
-my_user_id = "USER_ID"
+my_user_id = USER_ID
 
 [du]
 notify_at = 90
 notify_every = 7200
+
+[openai]
+api_key = "API_KEY"
