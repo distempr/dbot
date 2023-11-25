@@ -113,7 +113,7 @@ def main():
     user_id = config['tg']['my_user_id']
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND & filters.Chat(user_id), chat))
 
-    application.job_queue.run_repeating(ec2, 30)
+    application.job_queue.run_repeating(ec2, 60)
     application.job_queue.run_repeating(du, config['du']['notify_every'])
 
     application.run_polling(allowed_updates=Update.ALL_TYPES)
