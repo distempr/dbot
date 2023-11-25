@@ -30,18 +30,32 @@ cur = con.cursor()
 
 
 def chat_completion(prompt):
-    messages = [
-        {'role': 'system', 'content': CHAT_SYSTEM_PROMPT},
+    messages = []
+    messages.append(
+        {'role': 'system', 'content': CHAT_SYSTEM_PROMPT}
+    )
+
+    cur.execute('SELECT role, content FROM (SELECT * FROM chat ORDER BY id DESC LIMIT 10) ORDER BY id ASC')
+    rows = cur.fetchall()
+    for message in rows:
+        messages.append({'role': message[0], 'content': message[1]})
+
+    messages.append(
         {'role': 'user', 'content': prompt}
-    ]
+    )
 
     response = chat_client.chat.completions.create(
         model=CHAT_MODEL,
         messages=messages,
         temperature=CHAT_TEMPERATURE
     )
+    response = response.choices[0].message.content
 
-    return response.choices[0].message.content
+    cur.execute('INSERT INTO chat (role, content) VALUES (?, ?)', ('user', prompt))
+    cur.execute('INSERT INTO chat (role, content) VALUES (?, ?)', ('assistant', response))
+    con.commit()
+
+    return response
 
 
 def get_ec2_instance_state(instance_id):
@@ -60,14 +74,7 @@ async def send_message(context, text):
 
 async def chat(update, context):
     from_user = update.message.from_user
-    user_id = config['tg']['my_user_id']
-
     print(f'Received message from {from_user['username']}/{from_user['id']}')
-
-    # TODO Consider using filters instead
-    if from_user['id'] != user_id:
-        print('Message not from myself')
-        return None
 
     response = chat_completion(update.message.text)
     await update.message.reply_text(response)
@@ -103,7 +110,8 @@ async def du(context):
 def main():
     application = Application.builder().token(config['tg']['token']).build()
 
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat))
+    user_id = config['tg']['my_user_id']
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND & filters.Chat(user_id), chat))
 
     application.job_queue.run_repeating(ec2, 30)
     application.job_queue.run_repeating(du, config['du']['notify_every'])
