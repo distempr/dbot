@@ -1,8 +1,8 @@
 CREATE TABLE IF NOT EXISTS ec2 (
   id TEXT PRIMARY KEY NOT NULL,
-  name TEXT,
+  name TEXT NOT NULL,
   state TEXT,
-  notification_time TEXT 
+  notification_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
 INSERT INTO ec2 (id, name) VALUES (

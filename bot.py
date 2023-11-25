@@ -2,6 +2,8 @@ import shutil
 import sqlite3
 import tomllib
 
+from datetime import datetime, UTC, timedelta
+
 import boto3
 
 from openai import OpenAI
@@ -57,8 +59,13 @@ async def send_message(context, text):
 
 
 async def chat(update, context):
+    from_user = update.message.from_user
     user_id = config['tg']['my_user_id']
-    if update.message.from_user['id'] != user_id:
+
+    print(f'Received message from {from_user['username']}/{from_user['id']}')
+
+    # TODO Consider using filters instead
+    if from_user['id'] != user_id:
         print('Message not from myself')
         return None
 
@@ -67,14 +74,24 @@ async def chat(update, context):
 
 
 async def ec2(context):
-    result = cur.execute('SELECT id, name, state FROM ec2')
+    result = cur.execute('SELECT id, name, state, notification_time FROM ec2')
+
+    now = int(datetime.now(UTC).timestamp())
+
     for row in result.fetchall():
-        id_, name, state = row
+        id_, name, state, notification_time = row
+
         current_state = get_ec2_instance_state(id_)
+        message = f'Instance {name} is {current_state}'
+
         if current_state != state:
-            cur.execute('UPDATE ec2 SET state = ? WHERE id = ?', (current_state, id_))
-            con.commit()
-            await send_message(context, f'Instance {name} is {current_state}')
+            cur.execute('UPDATE ec2 SET state = ?, notification_time = ? WHERE id = ?', (current_state, now, id_))
+            await send_message(context, message)
+        elif current_state != 'stopped' and (now - notification_time) > (3600 * 8):
+            cur.execute('UPDATE ec2 SET notification_time = ? WHERE id = ?', (now, id_))
+            await send_message(context, message)
+        
+    con.commit()
 
 
 async def du(context):
@@ -88,7 +105,7 @@ def main():
 
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat))
 
-    application.job_queue.run_repeating(ec2, 60)
+    application.job_queue.run_repeating(ec2, 30)
     application.job_queue.run_repeating(du, config['du']['notify_every'])
 
     application.run_polling(allowed_updates=Update.ALL_TYPES)
