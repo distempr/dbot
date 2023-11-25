@@ -21,7 +21,7 @@ with open('bot.toml', 'rb') as f:
 chat_client = OpenAI(api_key=config['openai']['api_key'])
 
 session = boto3.Session(profile_name=config['aws']['profile'])
-ec2 = session.resource('ec2', region_name=config['aws']['region'])
+ec2_resource = session.resource('ec2', region_name=config['aws']['region'])
 
 con = sqlite3.connect('bot.db')
 cur = con.cursor()
@@ -43,7 +43,7 @@ def chat_completion(prompt):
 
 
 def get_ec2_instance_state(instance_id):
-    return ec2.Instance(instance_id).state['Name']
+    return ec2_resource.Instance(instance_id).state['Name']
 
 
 def get_disk_usage():
@@ -67,10 +67,14 @@ async def chat(update, context):
 
 
 async def ec2(context):
-    # run some code and then if conditions are met...
-    condition = False
-    if condition:
-        await send_message(context)
+    result = cur.execute('SELECT id, name, state FROM ec2')
+    for row in result.fetchall():
+        id_, name, state = row
+        current_state = get_ec2_instance_state(id_)
+        if current_state != state:
+            cur.execute('UPDATE ec2 SET state = ? WHERE id = ?', (current_state, id_))
+            con.commit()
+            await send_message(context, f'Instance {name} is {current_state}')
 
 
 async def du(context):
