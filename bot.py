@@ -11,16 +11,11 @@ from telegram import Update
 from telegram.ext import Application, MessageHandler, filters
 
 
-CHAT_SYSTEM_PROMPT = 'You are my personal bot. You prefer brief, to-the-point answers and help me with stupid questions.'
-CHAT_TEMPERATURE = 1
-CHAT_MODEL = 'gpt-4'
-
-
 with open('bot.toml', 'rb') as f:
     config = tomllib.load(f)
 
 
-chat_client = OpenAI(api_key=config['openai']['api_key'])
+chat_client = OpenAI(api_key=config['chat']['api_key'])
 
 session = boto3.Session(profile_name=config['aws']['profile'])
 ec2_resource = session.resource('ec2', region_name=config['aws']['region'])
@@ -32,7 +27,7 @@ cur = con.cursor()
 def chat_completion(prompt):
     messages = []
     messages.append(
-        {'role': 'system', 'content': CHAT_SYSTEM_PROMPT}
+        {'role': 'system', 'content': config['chat']['system_prompt']}
     )
 
     cur.execute('SELECT role, content FROM (SELECT * FROM chat ORDER BY id DESC LIMIT 10) ORDER BY id ASC')
@@ -45,9 +40,9 @@ def chat_completion(prompt):
     )
 
     response = chat_client.chat.completions.create(
-        model=CHAT_MODEL,
+        model=config['chat']['model'],
         messages=messages,
-        temperature=CHAT_TEMPERATURE
+        temperature=config['chat']['temperature']
     )
     response = response.choices[0].message.content
 
@@ -94,7 +89,7 @@ async def ec2(context):
         if current_state != state:
             cur.execute('UPDATE ec2 SET state = ?, notification_time = ? WHERE id = ?', (current_state, now, id_))
             await send_message(context, message)
-        elif current_state != 'stopped' and (now - notification_time) > (3600 * 8):
+        elif current_state != 'stopped' and (now - notification_time) > (3600 * 4):
             cur.execute('UPDATE ec2 SET notification_time = ? WHERE id = ?', (now, id_))
             await send_message(context, message)
         
