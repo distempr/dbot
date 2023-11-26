@@ -107,7 +107,7 @@ async def du(context):
         await send_message(context, f'Disk usage is at {usage}%')
 
 
-def main():
+if __name__ == '__main__':
     application = Application.builder().token(config['tg']['token']).build()
 
     user_id = config['tg']['my_user_id']
@@ -117,7 +117,3 @@ def main():
     application.job_queue.run_repeating(du, config['du']['notify_every'])
 
     application.run_polling(allowed_updates=Update.ALL_TYPES)
-
-
-if __name__ == '__main__':
-    main()
