@@ -1,6 +1,9 @@
-[aws]
+[ec2]
 region = "REGION"
 profile = "PROFILE"
+
+[ec2.instances]
+instance-name = "INSTANCE_ID"
 
 [tg]
 token = "TOKEN"

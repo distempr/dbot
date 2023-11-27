@@ -18,10 +18,17 @@ with open('bot.toml', 'rb') as f:
 
 chat_client = OpenAI(api_key=config['chat']['api_key'])
 
-session = boto3.Session(profile_name=config['aws']['profile'])
-ec2_resource = session.resource('ec2', region_name=config['aws']['region'])
+session = boto3.Session(profile_name=config['ec2']['profile'])
+ec2_resource = session.resource('ec2', region_name=config['ec2']['region'])
 
 con = sqlite3.connect('bot.db')
+
+
+def populate_db():
+    cur = con.cursor()
+    for name, id_ in config['ec2'].get('instances', {}).items():
+        cur.execute('INSERT OR IGNORE INTO ec2 (id, name) VALUES (?, ?)', (id_, name))
+    con.commit()
 
 
 def chat_completion(prompt):
@@ -112,6 +119,8 @@ async def clean(context):
 
 
 if __name__ == '__main__':
+    populate_db()
+
     application = Application.builder().token(config['tg']['token']).build()
 
     user_id = config['tg']['my_user_id']

@@ -10,9 +10,3 @@ CREATE TABLE IF NOT EXISTS chat (
   role TEXT,
   content TEXT
 );
-
-INSERT OR IGNORE INTO ec2 (id, name) VALUES (
-  'i-0407aa9c088765b25',
-  'dev'
-);
-
