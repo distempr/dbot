@@ -15,7 +15,6 @@ from telegram.ext import Application, MessageHandler, filters
 with open('bot.toml', 'rb') as f:
     config = tomllib.load(f)
 
-
 chat_client = OpenAI(api_key=config['chat']['api_key'])
 
 session = boto3.Session(profile_name=config['ec2']['profile'])
@@ -26,10 +25,12 @@ con = sqlite3.connect('bot.db')
 
 def populate_db():
     cur = con.cursor()
+    cur.execute('UPDATE ec2 SET active = 0')
     for name, id_ in config['ec2'].get('instances', {}).items():
-        cur.execute('INSERT OR IGNORE INTO ec2 (id, name) VALUES (?, ?)', (id_, name))
-    con.commit()
+        cur.execute('INSERT OR IGNORE INTO ec2 (name, id) VALUES (?, ?)', (name, id_))
+        cur.execute('UPDATE ec2 SET active = 1 WHERE name = ?', (name,))
 
+    con.commit()
 
 def chat_completion(prompt):
     cur = con.cursor()
