@@ -8,6 +8,7 @@ import boto3
 
 from openai import OpenAI
 from telegram import Update
+from telegram.constants import ParseMode
 from telegram.ext import Application, MessageHandler, filters
 
 
@@ -64,7 +65,7 @@ def get_disk_usage():
 
 async def send_message(context, text):
     user_id = config['tg']['my_user_id']
-    await context.bot.send_message(chat_id=user_id, text=text)
+    await context.bot.send_message(user_id, text, parse_mode=ParseMode.MARKDOWN_V2)
 
 
 async def chat(update, context):
@@ -72,7 +73,7 @@ async def chat(update, context):
     print(f'Received message from {from_user['username']}/{from_user['id']}')
 
     response = chat_completion(update.message.text)
-    await update.message.reply_text(response)
+    await update.message.reply_text(response, parse_mode=ParseMode.MARKDOWN_V2)
 
 
 async def ec2(context):
@@ -84,7 +85,7 @@ async def ec2(context):
         id_, name, state, notification_time = row
 
         current_state = get_ec2_instance_state(id_)
-        message = f'Instance {name} is {current_state}'
+        message = f'Instance `{name}` is {current_state}'
 
         if current_state != state:
             cur.execute('UPDATE ec2 SET state = ?, notification_time = ? WHERE id = ?', (current_state, now, id_))
@@ -92,7 +93,7 @@ async def ec2(context):
         elif current_state != 'stopped' and (now - notification_time) > (3600 * 4):
             cur.execute('UPDATE ec2 SET notification_time = ? WHERE id = ?', (now, id_))
             await send_message(context, message)
-        
+
     con.commit()
 
 
