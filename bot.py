@@ -2,7 +2,7 @@ import shutil
 import sqlite3
 import tomllib
 
-from datetime import datetime, UTC, timedelta
+from datetime import datetime, UTC, timedelta, time
 
 import boto3
 
@@ -22,10 +22,11 @@ session = boto3.Session(profile_name=config['aws']['profile'])
 ec2_resource = session.resource('ec2', region_name=config['aws']['region'])
 
 con = sqlite3.connect('bot.db')
-cur = con.cursor()
 
 
 def chat_completion(prompt):
+    cur = con.cursor()
+
     messages = []
     messages.append(
         {'role': 'system', 'content': config['chat']['system_prompt']}
@@ -77,6 +78,7 @@ async def chat(update, context):
 
 
 async def ec2(context):
+    cur = con.cursor()
     result = cur.execute('SELECT id, name, state, notification_time FROM ec2')
 
     now = int(datetime.now(UTC).timestamp())
@@ -103,6 +105,12 @@ async def du(context):
         await send_message(context, f'Disk usage is at {usage}%')
 
 
+async def clean(context):
+    cur = con.cursor()
+    cur.execute('DELETE FROM chat WHERE id < (SELECT MAX(id) FROM chat) - 20')
+    con.commit()
+
+
 if __name__ == '__main__':
     application = Application.builder().token(config['tg']['token']).build()
 
@@ -111,5 +119,6 @@ if __name__ == '__main__':
 
     application.job_queue.run_repeating(ec2, 60)
     application.job_queue.run_repeating(du, config['du']['notify_every'])
+    application.job_queue.run_daily(clean, time(hour=2))
 
     application.run_polling(allowed_updates=Update.ALL_TYPES)
