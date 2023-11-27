@@ -10,6 +10,7 @@ from openai import OpenAI
 from telegram import Update
 from telegram.constants import ParseMode
 from telegram.ext import Application, MessageHandler, filters
+#from telegram.helpers import escape_markdown
 
 
 with open('bot.toml', 'rb') as f:
@@ -75,7 +76,8 @@ def get_disk_usage():
 
 async def send_message(context, text):
     user_id = config['tg']['my_user_id']
-    await context.bot.send_message(user_id, text, parse_mode=ParseMode.MARKDOWN_V2)
+#    text = escape_markdown(text, version=2)
+    await context.bot.send_message(user_id, text, parse_mode=ParseMode.MARKDOWN)
 
 
 async def chat(update, context):
@@ -83,7 +85,7 @@ async def chat(update, context):
     print(f'Received message from {from_user['username']}/{from_user['id']}')
 
     response = chat_completion(update.message.text)
-    await update.message.reply_text(response, parse_mode=ParseMode.MARKDOWN_V2)
+    await send_message(context, response)
 
 
 async def ec2(context):
