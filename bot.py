@@ -41,7 +41,7 @@ def chat_completion(prompt):
         {'role': 'system', 'content': config['chat']['system_prompt']}
     )
 
-    cur.execute('SELECT role, content FROM (SELECT * FROM chat ORDER BY id DESC LIMIT 10) ORDER BY id ASC')
+    cur.execute('SELECT role, content FROM (SELECT * FROM chat ORDER BY id DESC LIMIT 8) ORDER BY id ASC')
     rows = cur.fetchall()
     for message in rows:
         messages.append({'role': message[0], 'content': message[1]})
