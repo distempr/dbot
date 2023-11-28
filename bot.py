@@ -90,7 +90,7 @@ async def chat(update, context):
 
 async def ec2(context):
     cur = con.cursor()
-    result = cur.execute('SELECT id, name, state, notification_time FROM ec2')
+    result = cur.execute('SELECT id, name, state, notification_time FROM ec2 WHERE active = 1')
 
     now = int(datetime.now(UTC).timestamp())
 
