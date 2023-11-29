@@ -80,7 +80,7 @@ async def send_message(context, text):
 
 async def chat(update, context):
     from_user = update.message.from_user
-    print(f'Received message from {from_user['username']}/{from_user['id']}')
+    print(f"Received message from {from_user["username"]}/{from_user["id"]}")
 
     response = chat_completion(update.message.text)
     await send_message(context, response)
