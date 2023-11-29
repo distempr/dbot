@@ -118,7 +118,7 @@ async def du(context):
 
 async def clean(context):
     cur = con.cursor()
-    cur.execute('DELETE FROM chat WHERE id < (SELECT MAX(id) FROM chat) - 20')
+    cur.execute('DELETE FROM chat WHERE id < (SELECT MAX(id) FROM chat) - 16')
     con.commit()
 
 
