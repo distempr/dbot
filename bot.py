@@ -28,8 +28,8 @@ def populate_db():
     cur = con.cursor()
     cur.execute('UPDATE ec2 SET active = 0')
     for name, id_ in config['ec2'].get('instances', {}).items():
-        cur.execute('INSERT OR IGNORE INTO ec2 (name, id) VALUES (?, ?)', (name, id_))
-        cur.execute('UPDATE ec2 SET active = 1 WHERE name = ?', (name,))
+        cur.execute('INSERT OR IGNORE INTO ec2 (id, name) VALUES (?, ?)', (id_, name))
+        cur.execute('UPDATE ec2 SET active = 1 WHERE id = ?', (id_,))
 
     con.commit()
 
