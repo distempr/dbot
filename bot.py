@@ -14,10 +14,12 @@ from telegram.constants import ParseMode
 from telegram.ext import Application, MessageHandler, filters
 
 
-config_path = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "dbot.toml"
-db_path = Path(os.environ.get("XDG_STATE_HOME", Path.home() / ".local" / "state")) / "dbot.db"
+config_home = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config"))
+state_home = Path(os.environ.get("XDG_STATE_HOME", Path.home() / ".local" / "state"))
+config_path = config_home / "dbot.toml"
+db_path = state_home / "dbot.db"
 
-with open(config_path, "rb") as f:
+with config_path.open("rb") as f:
     config = tomllib.load(f)
 
 con = sqlite3.connect(db_path)
