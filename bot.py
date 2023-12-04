@@ -1,3 +1,4 @@
+import os
 import shutil
 import sqlite3
 import tomllib
@@ -5,6 +6,7 @@ import tomllib
 import boto3
 
 from datetime import datetime, UTC, time
+from pathlib import Path
 
 from openai import OpenAI
 from telegram import Update
@@ -12,15 +14,18 @@ from telegram.constants import ParseMode
 from telegram.ext import Application, MessageHandler, filters
 
 
-with open("bot.toml", "rb") as f:
+config_path = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "dbot.toml"
+db_path = Path(os.environ.get("XDG_STATE_HOME", Path.home() / ".local" / "state")) / "dbot.db"
+
+with open(config_path, "rb") as f:
     config = tomllib.load(f)
 
-chat_client = OpenAI(api_key=config["chat"]["api_key"])
+con = sqlite3.connect(db_path)
 
 session = boto3.Session(profile_name=config["ec2"]["profile"])
 ec2_resource = session.resource("ec2", region_name=config["ec2"]["region"])
 
-con = sqlite3.connect("bot.db")
+chat_client = OpenAI(api_key=config["chat"]["api_key"])
 
 
 def populate_db():
