@@ -6,6 +6,6 @@ version = "0.1.0"
 
 [tool.poetry.dependencies]
 python = "^3.12"
-boto3 = "^1.33.1"
-openai = "^1.3.5"
+boto3 = "^1.33.6"
+openai = "^1.3.7"
 python-telegram-bot = { extras = ["job-queue"], version = "^20.7" }
