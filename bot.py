@@ -14,10 +14,10 @@ from telegram.constants import ParseMode
 from telegram.ext import Application, MessageHandler, filters
 
 
-config_home = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config"))
-state_home = Path(os.environ.get("XDG_STATE_HOME", Path.home() / ".local" / "state"))
-config_path = config_home / "dbot.toml"
-db_path = state_home / "dbot.db"
+config_home: Path = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config"))
+state_home: Path = Path(os.environ.get("XDG_STATE_HOME", Path.home() / ".local" / "state"))
+config_path: Path = config_home / "dbot.toml"
+db_path: Path = state_home / "dbot.db"
 
 with config_path.open("rb") as f:
     config = tomllib.load(f)
@@ -30,7 +30,7 @@ ec2_resource = session.resource("ec2", region_name=config["ec2"]["region"])
 chat_client = OpenAI(api_key=config["chat"]["api_key"])
 
 
-def populate_db():
+def populate_db() -> None:
     cur = con.cursor()
     cur.execute("UPDATE ec2 SET active = 0")
     for name, id_ in config["ec2"].get("instances", {}).items():
@@ -40,7 +40,7 @@ def populate_db():
     con.commit()
 
 
-def chat_completion(prompt):
+def chat_completion(prompt: str) -> str:
     cur = con.cursor()
 
     messages = []
@@ -71,21 +71,21 @@ def chat_completion(prompt):
     return response
 
 
-def get_ec2_instance_state(instance_id):
+def get_ec2_instance_state(instance_id: str) -> str:
     return ec2_resource.Instance(instance_id).state["Name"]
 
 
-def get_disk_usage():
+def get_disk_usage() -> float:
     du = shutil.disk_usage("/")
     return round((du.used / du.total) * 100, 1)
 
 
-async def send_message(context, text):
+async def send_message(context, text: str) -> None:
     user_id = config["tg"]["my_user_id"]
     await context.bot.send_message(user_id, text, parse_mode=ParseMode.MARKDOWN)
 
 
-async def chat(update, context):
+async def chat(update, context) -> None:
     from_user = update.message.from_user
     print(f"Received message from {from_user["username"]}/{from_user["id"]}")
 
@@ -93,7 +93,7 @@ async def chat(update, context):
     await send_message(context, response)
 
 
-async def ec2(context):
+async def ec2(context) -> None:
     cur = con.cursor()
     result = cur.execute(
         "SELECT id, name, state, notification_time FROM ec2 WHERE active = 1"
@@ -120,13 +120,13 @@ async def ec2(context):
     con.commit()
 
 
-async def du(context):
+async def du(context) -> None:
     usage = get_disk_usage()
     if usage >= config["du"]["notify_at"]:
         await send_message(context, f"Disk usage is at {usage}%")
 
 
-async def clean(context):
+async def clean(context) -> None:
     cur = con.cursor()
     cur.execute("DELETE FROM chat WHERE id < (SELECT MAX(id) FROM chat) - 16")
     con.commit()
