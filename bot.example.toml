@@ -1,6 +1,8 @@
 [ec2]
 region = "REGION"
 profile = "PROFILE"
+check_every = 90
+notify_every = 4 # hours
 
 [ec2.instances]
 instance-name = "INSTANCE_ID"

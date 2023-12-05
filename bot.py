@@ -113,7 +113,7 @@ async def ec2(context) -> None:
                 (current_state, now, id_),
             )
             await send_message(context, message)
-        elif current_state != "stopped" and (now - notification_time) > (3600 * 4):
+        elif current_state != "stopped" and (now - notification_time) > (3600 * config["ec2"]["notify_every"]):
             cur.execute("UPDATE ec2 SET notification_time = ? WHERE id = ?", (now, id_))
             await send_message(context, message)
 
@@ -142,7 +142,7 @@ if __name__ == "__main__":
         MessageHandler(filters.TEXT & ~filters.COMMAND & filters.Chat(user_id), chat)
     )
 
-    application.job_queue.run_repeating(ec2, 60)
+    application.job_queue.run_repeating(ec2, config["ec2"]["check_every"])
     application.job_queue.run_repeating(du, config["du"]["notify_every"])
     application.job_queue.run_daily(clean, time(hour=2))
 
