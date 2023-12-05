@@ -7,6 +7,7 @@ import boto3
 
 from datetime import datetime, UTC, time
 from pathlib import Path
+from sqlite3 import Cursor, Connection
 
 from openai import OpenAI
 from telegram import Update
@@ -22,7 +23,7 @@ db_path: Path = state_home / "dbot.db"
 with config_path.open("rb") as f:
     config = tomllib.load(f)
 
-con = sqlite3.connect(db_path)
+con: Connection = sqlite3.connect(db_path)
 
 session = boto3.Session(profile_name=config["ec2"]["profile"])
 ec2_resource = session.resource("ec2", region_name=config["ec2"]["region"])
@@ -31,7 +32,7 @@ chat_client = OpenAI(api_key=config["chat"]["api_key"])
 
 
 def populate_db() -> None:
-    cur = con.cursor()
+    cur: Cursor = con.cursor()
     cur.execute("UPDATE ec2 SET active = 0")
     for name, id_ in config["ec2"].get("instances", {}).items():
         cur.execute("INSERT OR IGNORE INTO ec2 (name, id) VALUES (?, ?)", (name, id_))
@@ -40,10 +41,11 @@ def populate_db() -> None:
     con.commit()
 
 
-def chat_completion(prompt: str) -> str:
-    cur = con.cursor()
 
-    messages = []
+def chat_completion(prompt: str) -> str:
+    cur: Cursor = con.cursor()
+
+    messages: list[dict] = []
     messages.append({"role": "system", "content": config["chat"]["system_prompt"]})
 
     cur.execute(
@@ -87,14 +89,14 @@ async def send_message(context, text: str) -> None:
 
 async def chat(update, context) -> None:
     from_user = update.message.from_user
-    print(f"Received message from {from_user["username"]}/{from_user["id"]}")
+    print(f"Received message from {from_user['username']}/{from_user['id']}")
 
     response = chat_completion(update.message.text)
     await send_message(context, response)
 
 
 async def ec2(context) -> None:
-    cur = con.cursor()
+    cur: Cursor = con.cursor()
     result = cur.execute(
         "SELECT id, name, state, notification_time FROM ec2 WHERE active = 1"
     )
@@ -121,13 +123,13 @@ async def ec2(context) -> None:
 
 
 async def du(context) -> None:
-    usage = get_disk_usage()
+    usage: float = get_disk_usage()
     if usage >= config["du"]["notify_at"]:
         await send_message(context, f"Disk usage is at {usage}%")
 
 
 async def clean(context) -> None:
-    cur = con.cursor()
+    cur: Cursor = con.cursor()
     cur.execute("DELETE FROM chat WHERE id < (SELECT MAX(id) FROM chat) - 16")
     con.commit()
 
