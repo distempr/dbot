@@ -41,7 +41,6 @@ def populate_db() -> None:
     con.commit()
 
 
-
 def chat_completion(prompt: str) -> str:
     cur: Cursor = con.cursor()
 
