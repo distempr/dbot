@@ -82,7 +82,7 @@ def get_disk_usage() -> float:
 
 
 async def send_message(context, text: str) -> None:
-    user_id = config["tg"]["my_user_id"]
+    user_id: int = config["tg"]["my_user_id"]
     await context.bot.send_message(user_id, text, parse_mode=ParseMode.MARKDOWN)
 
 
@@ -105,8 +105,8 @@ async def ec2(context) -> None:
     for row in result.fetchall():
         id_, name, state, notification_time = row
 
-        current_state = get_ec2_instance_state(id_)
-        message = f"Instance `{name}` is {current_state}"
+        current_state: str = get_ec2_instance_state(id_)
+        message: str = f"Instance `{name}` is {current_state}"
 
         if current_state != state:
             cur.execute(
@@ -138,7 +138,7 @@ if __name__ == "__main__":
 
     application = Application.builder().token(config["tg"]["token"]).build()
 
-    user_id = config["tg"]["my_user_id"]
+    user_id: int = config["tg"]["my_user_id"]
     application.add_handler(
         MessageHandler(filters.TEXT & ~filters.COMMAND & filters.Chat(user_id), chat)
     )
