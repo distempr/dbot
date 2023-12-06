@@ -144,7 +144,10 @@ if __name__ == "__main__":
     )
 
     application.job_queue.run_repeating(ec2, config["ec2"]["check_every"])
-    application.job_queue.run_repeating(du, config["du"]["notify_every"])
+    application.job_queue.run_repeating(du, config["du"]["notify_every"] * 3600)
     application.job_queue.run_daily(clean, time(hour=2))
 
-    application.run_polling(allowed_updates=Update.MESSAGE)
+    application.run_polling(
+        allowed_updates=Update.MESSAGE,
+        drop_pending_updates=True
+    )
