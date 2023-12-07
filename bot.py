@@ -101,7 +101,7 @@ async def ec2(context) -> None:
         "SELECT id, name, state, notification_time FROM ec2 WHERE active = 1"
     )
 
-    now = int(datetime.now(UTC).timestamp())
+    now: int = int(datetime.now(UTC).timestamp())
 
     for row in result.fetchall():
         id_, name, state, notification_time = row
