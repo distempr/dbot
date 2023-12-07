@@ -48,7 +48,8 @@ def chat_completion(prompt: str) -> str:
     messages.append({"role": "system", "content": config["chat"]["system_prompt"]})
 
     cur.execute(
-        "SELECT role, content FROM (SELECT * FROM chat ORDER BY id DESC LIMIT 8) ORDER BY id ASC"
+        "SELECT role, content FROM (SELECT * FROM chat ORDER BY id DESC LIMIT ?) ORDER BY id ASC",
+        (config["chat"]["context"],)
     )
     rows = cur.fetchall()
     for message in rows:
@@ -129,7 +130,10 @@ async def du(context) -> None:
 
 async def clean(context) -> None:
     cur: Cursor = con.cursor()
-    cur.execute("DELETE FROM chat WHERE id < (SELECT MAX(id) FROM chat) - 1024")
+    cur.execute(
+        "DELETE FROM chat WHERE id < (SELECT MAX(id) FROM chat) - ?",
+        (config["chat"]["clean"],)
+    )
     con.commit()
 
 
