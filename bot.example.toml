@@ -9,7 +9,7 @@ instance-name = "INSTANCE_ID"
 
 [tg]
 token = "TOKEN"
-my_user_id = USER_ID
+my_user_id = 0 # replace with your user ID
 
 [du]
 notify_at = 90
