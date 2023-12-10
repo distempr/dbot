@@ -14,6 +14,7 @@ mkdir -p ~/.local/state
 sqlite3 ~/.local/state/dbot.db <bot.sql
 
 cp bot.example.toml ~/.config/dbot.toml
+chmod 600 ~/.config/dbot.toml
 
 # Edit the config you just copied and run the bot:
 python bot.py
