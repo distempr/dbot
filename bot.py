@@ -144,11 +144,19 @@ if __name__ == "__main__":
 
     user_id: int = config["tg"]["my_user_id"]
     application.add_handler(
-        MessageHandler(filters.TEXT & ~filters.COMMAND & filters.Chat(user_id), chat)
+        MessageHandler(
+            filters.TEXT
+            & ~filters.COMMAND
+            & filters.Chat(user_id),
+            chat
+        )
     )
 
     application.job_queue.run_repeating(ec2, config["ec2"]["check_every"])
-    application.job_queue.run_repeating(du, config["du"]["notify_every"] * 3600)
+    application.job_queue.run_repeating(
+        du,
+        config["du"]["notify_every"] * 3600
+    )
     application.job_queue.run_daily(clean, time(hour=2))
 
     application.run_polling(
