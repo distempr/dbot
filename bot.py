@@ -141,7 +141,7 @@ async def clean(context) -> None:
 
 
 if __name__ == "__main__":
-    print('Bot started, populating DB and building application...')
+    print("Bot started, populating DB and building application...")
 
     populate_db()
     application = Application.builder().token(config["tg"]["token"]).build()
