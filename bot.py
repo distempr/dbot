@@ -1,3 +1,4 @@
+import logging
 import os
 import shutil
 import sqlite3
@@ -89,7 +90,7 @@ async def send_message(context, text: str) -> None:
 
 async def chat(update, context) -> None:
     from_user = update.message.from_user
-    print(f"Received message from {from_user['username']}/{from_user['id']}")
+    logging.info(f"Received message from {from_user['username']}/{from_user['id']}")
 
     response = chat_completion(update.message.text)
     await send_message(context, response)
@@ -129,6 +130,8 @@ async def du(context) -> None:
 
 
 async def clean(context) -> None:
+    print("Cleaning DB")
+
     cur: Cursor = con.cursor()
     cur.execute(
         "DELETE FROM chat WHERE id < (SELECT MAX(id) FROM chat) - ?",
@@ -138,8 +141,9 @@ async def clean(context) -> None:
 
 
 if __name__ == "__main__":
-    populate_db()
+    print('Bot started, populating DB and building application...')
 
+    populate_db()
     application = Application.builder().token(config["tg"]["token"]).build()
 
     user_id: int = config["tg"]["my_user_id"]

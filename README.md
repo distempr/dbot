@@ -19,7 +19,3 @@ chmod 600 ~/.config/dbot.toml
 # Edit the config you just copied and run the bot:
 python bot.py
 ```
-
-## Todo
-
-- Switch to using logging instead of print
