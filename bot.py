@@ -1,19 +1,21 @@
 import logging
 import os
+import platform
 import shutil
 import sqlite3
 import tomllib
 
 import boto3
+import openai
+import telegram
 
 from datetime import datetime, UTC, time
 from pathlib import Path
 from sqlite3 import Cursor, Connection
 
-from openai import OpenAI
 from telegram import Update
 from telegram.constants import ParseMode
-from telegram.ext import Application, MessageHandler, filters
+from telegram.ext import Application, MessageHandler, filters, CommandHandler
 
 
 config_home: Path = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config"))
@@ -24,12 +26,13 @@ db_path: Path = state_home / "dbot.db"
 with config_path.open("rb") as f:
     config = tomllib.load(f)
 
+tg_user_id: int = config["tg"]["my_user_id"]
 con: Connection = sqlite3.connect(db_path)
 
 session = boto3.Session(profile_name=config["ec2"]["profile"])
 ec2_resource = session.resource("ec2", region_name=config["ec2"]["region"])
 
-chat_client = OpenAI(api_key=config["chat"]["api_key"])
+chat_client = openai.OpenAI(api_key=config["chat"]["api_key"])
 
 
 def populate_db() -> None:
@@ -84,8 +87,7 @@ def get_disk_usage() -> float:
 
 
 async def send_message(context, text: str) -> None:
-    user_id: int = config["tg"]["my_user_id"]
-    await context.bot.send_message(user_id, text, parse_mode=ParseMode.MARKDOWN)
+    await context.bot.send_message(tg_user_id, text, parse_mode=ParseMode.MARKDOWN)
 
 
 async def chat(update, context) -> None:
@@ -93,7 +95,7 @@ async def chat(update, context) -> None:
     logging.info(f"Received message from {from_user['username']}/{from_user['id']}")
 
     response = chat_completion(update.message.text)
-    await send_message(context, response)
+    await update.message.reply_text(response, parse_mode=ParseMode.MARKDOWN)
 
 
 async def ec2(context) -> None:
@@ -129,6 +131,16 @@ async def du(context) -> None:
         await send_message(context, f"Disk usage is at {usage}%")
 
 
+async def version(update, context) -> None:
+    message: str = f"""Python: {platform.python_version()}
+PTB: {telegram.__version__}
+Boto3: {boto3.__version__}
+OpenAI: {openai.__version__}
+"""
+
+    await update.message.reply_text(message)
+
+
 async def clean(context) -> None:
     print("Cleaning DB")
 
@@ -146,15 +158,16 @@ if __name__ == "__main__":
     populate_db()
     application = Application.builder().token(config["tg"]["token"]).build()
 
-    user_id: int = config["tg"]["my_user_id"]
     application.add_handler(
         MessageHandler(
             filters.TEXT
             & ~filters.COMMAND
-            & filters.Chat(user_id),
+            & filters.Chat(tg_user_id),
             chat
         )
     )
+
+    application.add_handler(CommandHandler("version", version))
 
     application.job_queue.run_repeating(ec2, config["ec2"]["check_every"])
     application.job_queue.run_repeating(
