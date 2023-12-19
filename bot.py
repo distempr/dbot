@@ -87,7 +87,7 @@ def get_disk_usage() -> float:
 
 
 async def send_message(context, text: str) -> None:
-    await context.bot.send_message(tg_user_id, text, parse_mode=ParseMode.MARKDOWN)
+    await context.bot.send_message(tg_user_id, text, parse_mode=ParseMode.MARKDOWN_V2)
 
 
 async def chat(update, context) -> None:
@@ -95,7 +95,7 @@ async def chat(update, context) -> None:
     logging.info(f"Received message from {from_user['username']}/{from_user['id']}")
 
     response = chat_completion(update.message.text)
-    await update.message.reply_text(response, parse_mode=ParseMode.MARKDOWN)
+    await update.message.reply_text(response)
 
 
 async def ec2(context) -> None:
