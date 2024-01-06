@@ -29,7 +29,7 @@ with config_path.open("rb") as f:
 tg_user_id: int = config["tg"]["my_user_id"]
 con: Connection = sqlite3.connect(db_path)
 
-session = boto3.Session(profile_name=config["ec2"]["profile"])
+session = boto3.Session(profile_name=config["ec2"].get("profile", "default"))
 ec2_resource = session.resource("ec2", region_name=config["ec2"]["region"])
 
 chat_client = openai.OpenAI(api_key=config["chat"]["api_key"])
@@ -98,7 +98,7 @@ async def chat(update, context) -> None:
     await update.message.reply_text(response)
 
 
-async def ec2(context) -> None:
+async def ec2_check_state(context) -> None:
     cur: Cursor = con.cursor()
     result = cur.execute(
         "SELECT id, name, state, notification_time FROM ec2 WHERE active = 1"
@@ -123,6 +123,29 @@ async def ec2(context) -> None:
             await send_message(context, message)
 
     con.commit()
+
+
+async def ec2(update, context) -> None:
+    if context.args:
+        not_found = False
+
+        for instance in context.args:
+            id_ = config["ec2"]["instances"].get(instance, None)
+            if id_:
+                instance = ec2_resource.Instance(id_)
+                state = instance.state['Name']
+                match state:
+                    case 'stopped':
+                        instance.start()
+                    case 'running':
+                        instance.stop()
+            else:
+                not_found = True
+
+        if not_found:
+            await update.message.reply_text("One or more instances not found")
+    else:
+        await update.message.reply_text("Please supply instance names")        
 
 
 async def du(context) -> None:
@@ -152,11 +175,22 @@ async def clean(context) -> None:
     con.commit()
 
 
+async def post_init(context) -> None:
+    await context.bot.set_my_commands([
+        ("ec2", "toggle EC2 instance state"),
+        ("version", "show versions of Python and libraries")
+    ])
+
+
 if __name__ == "__main__":
     print("Bot started, populating DB and building application...")
 
     populate_db()
-    application = Application.builder().token(config["tg"]["token"]).build()
+    application = Application \
+        .builder() \
+        .token(config["tg"]["token"]) \
+        .post_init(post_init) \
+        .build()
 
     application.add_handler(
         MessageHandler(
@@ -167,9 +201,10 @@ if __name__ == "__main__":
         )
     )
 
+    application.add_handler(CommandHandler("ec2", ec2))
     application.add_handler(CommandHandler("version", version))
 
-    application.job_queue.run_repeating(ec2, config["ec2"]["check_every"])
+    application.job_queue.run_repeating(ec2_check_state, config["ec2"]["check_every"])
     application.job_queue.run_repeating(
         du,
         config["du"]["notify_every"] * 3600
