@@ -155,7 +155,8 @@ async def du(context) -> None:
 
 
 async def version(update, context) -> None:
-    message: str = f"""Python: {platform.python_version()}
+    message: str = f"""OS: {platform.freedesktop_os_release()["PRETTY_NAME"]}
+Python: {platform.python_version()}
 PTB: {telegram.__version__}
 Boto3: {boto3.__version__}
 OpenAI: {openai.__version__}
@@ -210,6 +211,7 @@ if __name__ == "__main__":
             )
         )
     )
+
     application.add_handler(CommandHandler("version", version))
 
     application.job_queue.run_repeating(ec2_check_state, config["ec2"]["check_every"])
