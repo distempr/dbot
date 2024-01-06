@@ -201,7 +201,15 @@ if __name__ == "__main__":
         )
     )
 
-    application.add_handler(CommandHandler("ec2", ec2))
+    application.add_handler(
+        CommandHandler(
+            "ec2",
+            ec2,
+            filters=(
+                filters.Chat(tg_user_id)
+            )
+        )
+    )
     application.add_handler(CommandHandler("version", version))
 
     application.job_queue.run_repeating(ec2_check_state, config["ec2"]["check_every"])
