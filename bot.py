@@ -133,11 +133,11 @@ async def ec2(update, context) -> None:
             id_ = config["ec2"]["instances"].get(instance, None)
             if id_:
                 instance = ec2_resource.Instance(id_)
-                state = instance.state['Name']
+                state = instance.state["Name"]
                 match state:
-                    case 'stopped':
+                    case "stopped":
                         instance.start()
-                    case 'running':
+                    case "running":
                         instance.stop()
             else:
                 not_found = True
