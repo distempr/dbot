@@ -13,7 +13,6 @@ from datetime import datetime, UTC, time
 from pathlib import Path
 from sqlite3 import Cursor, Connection
 
-from telegram import Update
 from telegram.constants import ParseMode
 from telegram.ext import Application, MessageHandler, filters, CommandHandler
 
@@ -222,6 +221,6 @@ if __name__ == "__main__":
     application.job_queue.run_daily(clean, time(hour=2))
 
     application.run_polling(
-        allowed_updates=Update.MESSAGE,
+        allowed_updates=telegram.Update.MESSAGE,
         drop_pending_updates=True
     )
