@@ -181,6 +181,8 @@ async def post_init(context) -> None:
         ("version", "show versions of Python and libraries")
     ])
 
+    print("Application initialised")
+
 
 if __name__ == "__main__":
     print("Bot started, populating DB and building application...")
