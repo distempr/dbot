@@ -91,7 +91,7 @@ async def send_message(context, text: str) -> None:
 
 async def chat(update, context) -> None:
     from_user = update.message.from_user
-    logging.info(f"Received message from {from_user['username']}/{from_user['id']}")
+    print(f"Received message from {from_user['username']}/{from_user['id']}")
 
     response = chat_completion(update.message.text)
     await update.message.reply_text(response)
