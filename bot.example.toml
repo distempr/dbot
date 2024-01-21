@@ -19,6 +19,6 @@ notify_every = 18 # hours
 api_key = "API_KEY"
 model = "MODEL"
 temperature = 1
-system_prompt = "You are my personal bot. You prefer brief, to-the-point answers and help me with stupid questions."
+system_prompt = "You are my personal bot. You prefer brief, to-the-point answers."
 context = 8
 clean = 1024
