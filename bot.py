@@ -13,8 +13,9 @@ from datetime import datetime, UTC, time
 from pathlib import Path
 from sqlite3 import Cursor, Connection
 
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.constants import ParseMode
-from telegram.ext import Application, MessageHandler, filters, CommandHandler
+from telegram.ext import Application, MessageHandler, filters, CommandHandler, CallbackQueryHandler
 
 
 config_home: Path = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config"))
@@ -100,51 +101,94 @@ async def chat(update, context) -> None:
 async def ec2_check_state(context) -> None:
     cur: Cursor = con.cursor()
     result = cur.execute(
-        "SELECT id, name, state, notification_time FROM ec2 WHERE active = 1"
+        "SELECT name, id, state, notification_time FROM ec2 WHERE active = 1"
     )
 
     now: int = int(datetime.now(UTC).timestamp())
 
     for row in result.fetchall():
-        id_, name, state, notification_time = row
+        name, id_, state, notification_time = row
 
         current_state: str = get_ec2_instance_state(id_)
         message: str = f"Instance `{name}` is {current_state}"
 
         if current_state != state:
             cur.execute(
-                "UPDATE ec2 SET state = ?, notification_time = ? WHERE id = ?",
-                (current_state, now, id_),
+                "UPDATE ec2 SET state = ?, notification_time = ? WHERE name = ?",
+                (current_state, now, name),
             )
             await send_message(context, message)
         elif current_state != "stopped" and (now - notification_time) > (3600 * config["ec2"]["notify_every"]):
-            cur.execute("UPDATE ec2 SET notification_time = ? WHERE id = ?", (now, id_))
+            cur.execute("UPDATE ec2 SET notification_time = ? WHERE name = ?", (now, id_))
             await send_message(context, message)
 
     con.commit()
 
 
-async def ec2(update, context) -> None:
-    if context.args:
-        not_found = False
+def toggle_ec2_state(name: str) -> None:
+    now: int = int(datetime.now(UTC).timestamp())
+    cur: Cursor = con.cursor()
 
-        for instance in context.args:
-            id_ = config["ec2"]["instances"].get(instance, None)
-            if id_:
-                instance = ec2_resource.Instance(id_)
-                state = instance.state["Name"]
-                match state:
-                    case "stopped":
-                        instance.start()
-                    case "running":
-                        instance.stop()
+    instance = ec2_resource.Instance(
+        config["ec2"]["instances"][name]
+    )
+    state = instance.state["Name"]
+    match state:
+        case "stopped":
+            instance.start()
+        case "running":
+            instance.stop()
+
+    cur.execute("UPDATE ec2 SET last_toggled_time = ? WHERE name = ?", (now, name))
+    con.commit()
+
+
+def get_ec2_by_ltt():
+    cur: Cursor = con.cursor()
+    cur.execute("SELECT name FROM ec2 ORDER BY last_toggled_time DESC LIMIT 4")
+    rows = cur.fetchall()
+    return [row[0] for row in rows]
+
+
+async def ec2(update, context) -> None:
+    if not context.args:
+        instances = get_ec2_by_ltt()
+        keyboard = []
+
+        for instance in instances:
+            keyboard.append([
+                InlineKeyboardButton(instance, callback_data=instance)
+            ])
+
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await update.message.reply_text(
+            "Please choose an instance whose state to toggle:",
+            reply_markup=reply_markup
+        )
+    else:
+        not_found: bool = False
+
+        for instance_name in context.args:
+            if instance_name in config["ec2"]["instances"]:
+                toggle_ec2_state(instance_name)
             else:
                 not_found = True
 
         if not_found:
             await update.message.reply_text("One or more instances not found")
-    else:
-        await update.message.reply_text("Please supply instance names")        
+
+
+async def button(update, context) -> None:
+    query = update.callback_query
+    if query.from_user.id != tg_user_id:
+        return None
+
+    await query.answer()
+    await query.edit_message_text(
+        text=f"Toggling instance `{query.data}`",
+        parse_mode=ParseMode.MARKDOWN_V2
+    )
+    toggle_ec2_state(query.data)
 
 
 async def du(context) -> None:
@@ -212,6 +256,7 @@ if __name__ == "__main__":
             )
         )
     )
+    application.add_handler(CallbackQueryHandler(button))
 
     application.add_handler(CommandHandler("version", version))
 
@@ -223,6 +268,6 @@ if __name__ == "__main__":
     application.job_queue.run_daily(clean, time(hour=2))
 
     application.run_polling(
-        allowed_updates=telegram.Update.MESSAGE,
+        allowed_updates=Update.MESSAGE,
         drop_pending_updates=True
     )
