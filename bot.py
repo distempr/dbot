@@ -77,8 +77,10 @@ def chat_completion(prompt: str) -> str:
     return response
 
 
-def get_ec2_instance_state(instance_id: str) -> str:
-    return ec2_resource.Instance(instance_id).state["Name"]
+def get_ec2_state(name: str) -> str:
+    return ec2_resource.Instance(
+        config["ec2"]["instances"][name]
+    ).state["Name"]
 
 
 def get_disk_usage() -> float:
@@ -101,15 +103,15 @@ async def chat(update, context) -> None:
 async def ec2_check_state(context) -> None:
     cur: Cursor = con.cursor()
     result = cur.execute(
-        "SELECT name, id, state, notification_time FROM ec2 WHERE active = 1"
+        "SELECT name, state, notification_time FROM ec2 WHERE active = 1"
     )
 
     now: int = int(datetime.now(UTC).timestamp())
 
     for row in result.fetchall():
-        name, id_, state, notification_time = row
+        name, state, notification_time = row
 
-        current_state: str = get_ec2_instance_state(id_)
+        current_state: str = get_ec2_state(name)
         message: str = f"Instance `{name}` is {current_state}"
 
         if current_state != state:
@@ -119,7 +121,7 @@ async def ec2_check_state(context) -> None:
             )
             await send_message(context, message)
         elif current_state != "stopped" and (now - notification_time) > (3600 * config["ec2"]["notify_every"]):
-            cur.execute("UPDATE ec2 SET notification_time = ? WHERE name = ?", (now, id_))
+            cur.execute("UPDATE ec2 SET notification_time = ? WHERE name = ?", (now, name))
             await send_message(context, message)
 
     con.commit()
