@@ -14,7 +14,7 @@ from sqlite3 import Cursor, Connection
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.constants import ParseMode
-from telegram.ext import Application, MessageHandler, filters, CommandHandler, CallbackQueryHandler
+from telegram.ext import Application, MessageHandler, filters, CommandHandler
 
 
 config_home: Path = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config"))
@@ -144,52 +144,17 @@ def toggle_ec2_state(name: str) -> None:
     con.commit()
 
 
-def get_ec2_by_ltt():
-    cur: Cursor = con.cursor()
-    cur.execute("SELECT name FROM ec2 ORDER BY last_toggled_time DESC LIMIT 4")
-    rows = cur.fetchall()
-    return [row[0] for row in rows]
-
-
 async def ec2(update, context) -> None:
-    if not context.args:
-        instances = get_ec2_by_ltt()
-        keyboard = []
+    not_found: bool = False
 
-        for instance in instances:
-            keyboard.append([
-                InlineKeyboardButton(instance, callback_data=instance)
-            ])
+    for instance_name in context.args:
+        if instance_name in config["ec2"]["instances"]:
+            toggle_ec2_state(instance_name)
+        else:
+            not_found = True
 
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        await update.message.reply_text(
-            "Please choose an instance whose state to toggle:",
-            reply_markup=reply_markup
-        )
-    else:
-        not_found: bool = False
-
-        for instance_name in context.args:
-            if instance_name in config["ec2"]["instances"]:
-                toggle_ec2_state(instance_name)
-            else:
-                not_found = True
-
-        if not_found:
-            await update.message.reply_text("One or more instances not found")
-
-
-async def button(update, context) -> None:
-    query = update.callback_query
-    if query.from_user.id != tg_user_id:
-        return None
-
-    await query.answer()
-    await query.edit_message_text(
-        text=f"Toggling instance `{query.data}`",
-        parse_mode=ParseMode.MARKDOWN_V2
-    )
-    toggle_ec2_state(query.data)
+    if not_found:
+        await update.message.reply_text("One or more instances not found")
 
 
 async def du(context) -> None:
@@ -221,11 +186,6 @@ async def clean(context) -> None:
 
 
 async def post_init(context) -> None:
-    await context.bot.set_my_commands([
-        ("ec2", "toggle EC2 instance state"),
-        ("version", "show versions of Python and libraries")
-    ])
-
     print("Application initialised")
 
 
@@ -257,7 +217,6 @@ if __name__ == "__main__":
             )
         )
     )
-    application.add_handler(CallbackQueryHandler(button))
 
     application.add_handler(CommandHandler("version", version))
 
