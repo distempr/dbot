@@ -6,7 +6,6 @@ import tomllib
 
 import boto3
 import openai
-import telegram
 
 from datetime import datetime, UTC, time
 from pathlib import Path
