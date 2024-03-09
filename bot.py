@@ -19,7 +19,7 @@ from telegram.ext import Application, MessageHandler, filters, CommandHandler
 config_home: Path = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config"))
 state_home: Path = Path(os.environ.get("XDG_STATE_HOME", Path.home() / ".local" / "state"))
 config_path: Path = config_home / "dbot.toml"
-db_path: Path = state_home / "dbot.db"
+db_path: Path = state_home / "dbot" / "dbot.db"
 
 with config_path.open("rb") as f:
     config = tomllib.load(f)
