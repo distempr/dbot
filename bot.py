@@ -11,7 +11,7 @@ from datetime import datetime, UTC, time
 from pathlib import Path
 from sqlite3 import Cursor, Connection
 
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram import Update
 from telegram.constants import ParseMode
 from telegram.ext import Application, MessageHandler, filters, CommandHandler
 
