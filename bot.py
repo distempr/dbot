@@ -6,12 +6,12 @@ import tomllib
 
 import boto3
 import openai
+import telegram as tg
 
 from datetime import datetime, UTC, time
 from pathlib import Path
 from sqlite3 import Cursor, Connection
 
-from telegram import Update
 from telegram.constants import ParseMode
 from telegram.ext import Application, MessageHandler, filters, CommandHandler
 
@@ -165,7 +165,7 @@ async def du(context) -> None:
 async def version(update, context) -> None:
     message: str = f"""OS: {platform.freedesktop_os_release()["PRETTY_NAME"]}
 Python: {platform.python_version()}
-PTB: {telegram.__version__}
+PTB: {tg.__version__}
 Boto3: {boto3.__version__}
 OpenAI: {openai.__version__}
 """
@@ -227,6 +227,6 @@ if __name__ == "__main__":
     application.job_queue.run_daily(clean, time(hour=2))
 
     application.run_polling(
-        allowed_updates=Update.MESSAGE,
+        allowed_updates=tg.Update.MESSAGE,
         drop_pending_updates=True
     )
