@@ -18,11 +18,19 @@ from telegram.ext import Application, MessageHandler, filters, CommandHandler
 
 config_home: Path = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config"))
 state_home: Path = Path(os.environ.get("XDG_STATE_HOME", Path.home() / ".local" / "state"))
-config_path: Path = config_home / "dbot.toml"
+
+dbot_config_path: Path = config_home / "dbot.toml"
+ec2_config_path: Path = config_home / "ec2.toml"
 db_path: Path = state_home / "dbot" / "dbot.db"
 
-with config_path.open("rb") as f:
+with dbot_config_path.open("rb") as f:
     config = tomllib.load(f)
+
+if ec2_config_path.is_file():
+    with ec2_config_path.open("rb") as f:
+        ec2_config = tomllib.load(f)
+        if "instances" in ec2_config:
+            config["ec2"]["instances"] = ec2_config["instances"]
 
 tg_user_id: int = config["tg"]["my_user_id"]
 con: Connection = sqlite3.connect(db_path)
@@ -36,9 +44,12 @@ chat_client = openai.OpenAI(api_key=config["chat"]["api_key"])
 def populate_db() -> None:
     cur: Cursor = con.cursor()
     cur.execute("UPDATE ec2 SET active = 0")
-    for name, id_ in config["ec2"].get("instances", {}).items():
-        cur.execute("INSERT OR IGNORE INTO ec2 (name, id) VALUES (?, ?)", (name, id_))
-        cur.execute("UPDATE ec2 SET active = 1, id = ? WHERE name = ?", (id_, name))
+    for instance in config["ec2"].get("instances", []):
+        name = instance.get("name")
+        id_ = instance.get("id")
+        if name and id_:
+            cur.execute("INSERT OR IGNORE INTO ec2 (name, id) VALUES (?, ?)", (name, id_))
+            cur.execute("UPDATE ec2 SET active = 1, id = ? WHERE name = ?", (id_, name))
 
     con.commit()
 
@@ -75,10 +86,26 @@ def chat_completion(prompt: str) -> str:
     return response
 
 
+def get_ec2_id(name: str) -> str:
+    id_ = None
+
+    for instance in config["ec2"].get("instances", []):
+        if instance["name"].startswith(name):
+            id_ = instance["id"]
+            break
+
+    return id_
+
+
 def get_ec2_state(name: str) -> str:
-    return ec2_resource.Instance(
-        config["ec2"]["instances"][name]
-    ).state["Name"]
+    id_ = get_ec2_id(name)
+
+    if id_:
+        return ec2_resource.Instance(
+            id_
+        ).state["Name"]
+
+    return None
 
 
 def get_disk_usage() -> float:
@@ -130,7 +157,7 @@ def toggle_ec2_state(name: str) -> None:
     cur: Cursor = con.cursor()
 
     instance = ec2_resource.Instance(
-        config["ec2"]["instances"][name]
+        get_ec2_id(name)
     )
     state = instance.state["Name"]
     match state:
@@ -147,7 +174,7 @@ async def ec2(update, context) -> None:
     not_found: bool = False
 
     for instance_name in context.args:
-        if instance_name in config["ec2"]["instances"]:
+        if get_ec2_id(instance_name):
             toggle_ec2_state(instance_name)
         else:
             not_found = True

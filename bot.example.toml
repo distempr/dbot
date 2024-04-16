@@ -4,9 +4,6 @@ profile = "PROFILE"
 check_every = 90
 notify_every = 4 # hours
 
-[ec2.instances]
-instance-name = "INSTANCE_ID"
-
 [tg]
 token = "TOKEN"
 my_user_id = 0 # replace with your user ID
