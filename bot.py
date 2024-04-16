@@ -46,10 +46,9 @@ def populate_db() -> None:
     cur.execute("UPDATE ec2 SET active = 0")
     for instance in config["ec2"].get("instances", []):
         name = instance.get("name")
-        id_ = instance.get("id")
-        if name and id_:
-            cur.execute("INSERT OR IGNORE INTO ec2 (name, id) VALUES (?, ?)", (name, id_))
-            cur.execute("UPDATE ec2 SET active = 1, id = ? WHERE name = ?", (id_, name))
+        if name:
+            cur.execute("INSERT OR IGNORE INTO ec2 (name) VALUES (?)", (name,))
+            cur.execute("UPDATE ec2 SET active = 1 WHERE name = ?", (name,))
 
     con.commit()
 
