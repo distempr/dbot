@@ -155,6 +155,8 @@ async def ec2_check_state(context) -> None:
         elif current_state != "stopped" and (now - notification_time) > notify_interval:
             cur.execute("UPDATE ec2 SET notification_time = ? WHERE name = ?", (now, name))
             await send_message(context, message)
+        else:
+            cur.execute("UPDATE ec2 SET soft_check_count = 0 WHERE name = ?", (name,))
 
     con.commit()
 
