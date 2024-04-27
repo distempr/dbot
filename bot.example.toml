@@ -1,8 +1,9 @@
 [ec2]
 region = "REGION"
 profile = "PROFILE"
-check_every = 90
-notify_every = 4 # hours
+check_every = 60
+soft_checks = 3
+notify_every = 2 # hours
 
 [tg]
 token = "TOKEN"

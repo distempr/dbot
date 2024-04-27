@@ -127,24 +127,32 @@ async def chat(update, context) -> None:
 async def ec2_check_state(context) -> None:
     cur: Cursor = con.cursor()
     result = cur.execute(
-        "SELECT name, state, notification_time FROM ec2 WHERE active = 1"
+        "SELECT name, state, soft_check_count, notification_time FROM ec2 WHERE active = 1"
     )
 
     now: int = int(datetime.now(UTC).timestamp())
+    notify_interval: int = 3600 * config["ec2"]["notify_every"]
 
     for row in result.fetchall():
-        name, state, notification_time = row
+        name, state, soft_check_count, notification_time = row
 
         current_state: str = get_ec2_state(name)
         message: str = f"Instance `{name}` is {current_state}"
 
         if current_state != state:
-            cur.execute(
-                "UPDATE ec2 SET state = ?, notification_time = ? WHERE name = ?",
-                (current_state, now, name),
-            )
-            await send_message(context, message)
-        elif current_state != "stopped" and (now - notification_time) > (3600 * config["ec2"]["notify_every"]):
+            soft_check_count += 1
+            if soft_check_count < config["ec2"]["soft_checks"]:
+                cur.execute(
+                    "UPDATE ec2 SET soft_check_count = ? WHERE name = ?",
+                    (soft_check_count, name)
+                )
+            else:
+                cur.execute(
+                    "UPDATE ec2 SET state = ?, soft_check_count = 0, notification_time = ? WHERE name = ?",
+                    (current_state, now, name),
+                )
+                await send_message(context, message)
+        elif current_state != "stopped" and (now - notification_time) > notify_interval:
             cur.execute("UPDATE ec2 SET notification_time = ? WHERE name = ?", (now, name))
             await send_message(context, message)
 
